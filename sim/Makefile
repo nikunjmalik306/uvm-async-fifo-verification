@@ -94,5 +94,5 @@ uvm_xcelium:
 		+UVM_TESTNAME=$(TESTNAME) +UVM_VERBOSITY=UVM_MEDIUM -l xcelium_uvm.log
 
 clean:
-	rm -f $(SIM_BIN) $(VCD_FILE) uvm_async_fifo.vcd
-	rm -rf work transcript vsim.wlf *.log INCA_libs simv* csrc *.key
+	rm -f $(SIM_BIN) $(VCD_FILE) uvm_async_fifo.vcd vcs_uvm.log questa_uvm.log xcelium_uvm.log
+	rm -rf work transcript vsim.wlf INCA_libs simv* csrc *.key

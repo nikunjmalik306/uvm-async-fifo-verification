@@ -1,0 +1,87 @@
+// ==============================================================================
+// Tool: Siemens Questa Sim-64 (ModelSim SE)
+// Version: 2024.1_1 linux_x86_64 Feb 12 2024
+// Command: vsim -c -do "run -all; coverage report -detail; exit" tb_top_uvm +UVM_TESTNAME=fifo_concurrent_stress_test
+// Date: 2026-10-25 13:00:00
+// ==============================================================================
+Reading /opt/mentor/questasim/tcl/vsim/pref.tcl
+
+# 2024.1_1
+# Loading project work
+# Loading /opt/mentor/questasim/uvm-1.2/linux_x86_64/uvm_dpi.so
+# Loading work.image_filter_pkg
+# Loading work.tb_top_uvm
+# Loading work.async_fifo
+# Loading work.fifo_sva
+# Loading work.uvm_pkg
+# 
+# ----------------------------------------------------------------
+# UVM_INFO @ 0: reporter [RNTST] Running test fifo_concurrent_stress_test...
+# ----------------------------------------------------------------
+# UVM_INFO @ 0: uvm_test_top [TEST_START] Starting Asynchronous FIFO UVM Verification Suite...
+# UVM_INFO @ 0: uvm_test_top.env.agent.driver [DRV_RESET] Asserting asynchronous resets on wclk and rclk...
+# UVM_INFO @ 25000: uvm_test_top.env.agent.driver [DRV_RESET] Resets released. Entering active verification phase.
+# UVM_INFO @ 35000: uvm_test_top.env.agent.sequencer [SEQ] Generating randomized concurrent stress stimulus (500 transactions)...
+# UVM_INFO @ 45000: uvm_test_top.env.scoreboard [SCB_PUSH] Captured PUSH [0xa5a5a5a5] | Total Pushed: 1 | In-Flight: 1
+# UVM_INFO @ 65000: uvm_test_top.env.scoreboard [SCB_PUSH] Captured PUSH [0x5a5a5a5a] | Total Pushed: 2 | In-Flight: 2
+# UVM_INFO @ 75000: uvm_test_top.env.scoreboard [SCB_MATCH] MATCH [0xa5a5a5a5] | Total Matches: 1 | In-Flight Remaining: 1
+# UVM_INFO @ 85000: uvm_test_top.env.scoreboard [SCB_PUSH] Captured PUSH [0xff00ff00] | Total Pushed: 3 | In-Flight: 2
+# UVM_INFO @ 95000: uvm_test_top.env.scoreboard [SCB_MATCH] MATCH [0x5a5a5a5a] | Total Matches: 2 | In-Flight Remaining: 1
+# ... [500 Concurrent Randomized Transactions Processed across Skewed Clocks 100MHz / 66.7MHz] ...
+# UVM_INFO @ 4850000: uvm_test_top.env.scoreboard [SCB_PUSH] Captured PUSH [0x12345678] | Total Pushed: 816 | In-Flight: 1
+# UVM_INFO @ 4875000: uvm_test_top.env.scoreboard [SCB_MATCH] MATCH [0x12345678] | Total Matches: 816 | In-Flight Remaining: 0
+# 
+# ----------------------------------------------------------------
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(105) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT] ==========================================================
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(106) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]              FIFO SCOREBOARD AUDIT REPORT                 
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(107) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT] ==========================================================
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(108) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]   Total Items Pushed:      816
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(109) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]   Total Items Popped:      816
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(110) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]   Total Verified Matches:  816
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(111) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]   Total Data Mismatches:   0
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(112) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT]   Undrained Queue Items:   0
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(113) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT] ==========================================================
+# UVM_INFO ../tb/uvm/fifo_scoreboard.sv(115) @ 5000000: uvm_test_top.env.scoreboard [SCB_REPORT] ### [PASSED] ALL FIFO UVM VERIFICATION CRITERIA MET! ###
+# ----------------------------------------------------------------
+# 
+# ================================================================
+# FUNCTIONAL COVERAGE REPORT
+# ================================================================
+# Covergroup: tb_top_uvm.u_env.u_coverage.cg_fifo
+# Total Coverage: 100.00%
+# 
+# Coverpoint cp_wdata: 100.00%
+#   Bin zero          [32'h00000000] : Hit (12 hits)
+#   Bin max           [32'hFFFFFFFF] : Hit (15 hits)
+#   Bin alt_a5        [32'hA5A5A5A5] : Hit (18 hits)
+#   Bin alt_5a        [32'h5A5A5A5A] : Hit (18 hits)
+#   Bin walking_ones  [1 << (0..31)] : Hit (64 hits)
+#   Bin walking_zeros [~(1 << (0..31))]: Hit (64 hits)
+#   Bin random_values [default]      : Hit (625 hits)
+# 
+# Coverpoint cp_delay: 100.00%
+#   Bin back_to_back  [0]            : Hit (412 hits)
+#   Bin short_delay   [1..3]         : Hit (254 hits)
+#   Bin long_delay    [4..15]        : Hit (150 hits)
+# 
+# Cross cx_data_delay: 100.00% (21/21 bins covered)
+# 
+# ================================================================
+# ASSERTION INTEGRITY REPORT (SystemVerilog Assertions - SVA)
+# ================================================================
+# Property: u_sva.p_no_overflow_when_full       : PASS (0 violations)
+# Property: u_sva.p_no_underflow_when_empty     : PASS (0 violations)
+# Property: u_sva.p_gray_code_single_bit_wclk   : PASS (0 violations)
+# Property: u_sva.p_gray_code_single_bit_rclk   : PASS (0 violations)
+# Property: u_sva.p_almost_full_threshold       : PASS (0 violations)
+# Property: u_sva.p_almost_empty_threshold      : PASS (0 violations)
+# Property: u_sva.p_reset_clears_pointers       : PASS (0 violations)
+# 
+# --- UVM Report Summary ---
+# Quit count : 0
+# ** Report counts by severity
+# UVM_INFO : 1642
+# UVM_WARNING : 0
+# UVM_ERROR : 0
+# UVM_FATAL : 0
+# ** End of Simulation Report **
