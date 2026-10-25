@@ -1,0 +1,5 @@
+*.vvp
+*.vcd
+*.log
+async_fifo_synth.v
+.DS_Store

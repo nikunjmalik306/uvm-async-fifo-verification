@@ -1,0 +1,32 @@
+# ==============================================================================
+# File: synth.ys
+# Description: Yosys Open-Source Synthesis script for Asynchronous FIFO
+# ==============================================================================
+
+read_verilog -sv ../rtl/sync_2ff.sv
+read_verilog -sv ../rtl/gray_counter.sv
+read_verilog -sv ../rtl/async_fifo.sv
+
+hierarchy -check -top async_fifo
+
+proc
+opt_expr
+opt_clean
+check
+opt
+
+fsm
+opt
+
+memory -nomap
+opt
+wreduce
+opt
+
+techmap
+opt
+
+clean
+stat -top async_fifo
+
+write_verilog -noattr async_fifo_synth.v
