@@ -23,8 +23,9 @@ class fifo_scoreboard extends uvm_scoreboard;
   uvm_tlm_analysis_fifo #(fifo_seq_item) wr_fifo;
   uvm_tlm_analysis_fifo #(fifo_seq_item) rd_fifo;
 
-  // Golden Reference Model Queue
+  // Synchronization & Golden Reference Model
   logic [31:0] expected_queue [$];
+  event        item_pushed_event;
 
   // Tracking Statistics
   int unsigned match_count    = 0;
@@ -49,6 +50,7 @@ class fifo_scoreboard extends uvm_scoreboard;
         wr_fifo.get(wr_item);
         expected_queue.push_back(wr_item.data);
         total_pushed++;
+        -> item_pushed_event;
         `uvm_info("SCB_PUSH", $sformatf("Captured PUSH [0x%08h] | Total Pushed: %0d | In-Flight: %0d", 
                   wr_item.data, total_pushed, expected_queue.size()), UVM_HIGH)
       end
@@ -58,20 +60,37 @@ class fifo_scoreboard extends uvm_scoreboard;
         rd_fifo.get(rd_item);
         total_popped++;
 
-        // Deterministic transaction-ordering synchronization:
-        // In physical CDC hardware, data read on rclk was pushed at an earlier wclk edge.
-        // Wait deterministically for expected_queue without arbitrary timed delays:
+        // Deterministic delta-cycle settlement and synchronization
         if (expected_queue.size() == 0) begin
-          wait(expected_queue.size() > 0);
+          #0; // Settle any concurrent delta-cycle monitor evaluations at current time
         end
 
-        exp_data = expected_queue.pop_front();
-        if (rd_item.data === exp_data) begin
-          match_count++;
-          `uvm_info("SCB_MATCH", $sformatf("MATCH [0x%08h] | Total Matches: %0d", rd_item.data, match_count), UVM_HIGH)
-        end else begin
+        // If queue is still empty, wait for push event with bounded timeout
+        if (expected_queue.size() == 0) begin
+          fork
+            begin
+              @(item_pushed_event);
+            end
+            begin
+              // Bounded timeout to prevent simulation deadlock on hardware underflow
+              #100ns;
+            end
+          join_any
+        end
+
+        if (expected_queue.size() == 0) begin
           mismatch_count++;
-          `uvm_error("SCB_MISMATCH", $sformatf("DATA MISMATCH! Got: 0x%08h != Expected: 0x%08h", rd_item.data, exp_data))
+          `uvm_error("SCB_UNDERFLOW", $sformatf("READ UNDERFLOW! Read item [0x%08h] observed but golden queue is EMPTY! No matching write transaction exists.", rd_item.data))
+        end else begin
+          exp_data = expected_queue.pop_front();
+          if (rd_item.data === exp_data) begin
+            match_count++;
+            `uvm_info("SCB_MATCH", $sformatf("MATCH [0x%08h] | Total Matches: %0d | In-Flight Remaining: %0d", 
+                      rd_item.data, match_count, expected_queue.size()), UVM_HIGH)
+          end else begin
+            mismatch_count++;
+            `uvm_error("SCB_MISMATCH", $sformatf("DATA MISMATCH! Got: 0x%08h != Expected: 0x%08h", rd_item.data, exp_data))
+          end
         end
       end
     join
