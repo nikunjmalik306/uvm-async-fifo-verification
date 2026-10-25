@@ -50,7 +50,7 @@ module async_fifo #(
   // --------------------------------------------------------------------------
   // Write Clock Domain Logic
   // --------------------------------------------------------------------------
-  assign wbin_next  = wbin + (winc & ~wfull);
+  assign wbin_next  = wbin + {{(ADDR_WIDTH){1'b0}}, (winc & ~wfull)};
   assign wgray_next = (wbin_next >> 1) ^ wbin_next;
 
   always_ff @(posedge wclk or negedge wrst_n) begin
@@ -100,14 +100,14 @@ module async_fifo #(
       walmost_full <= 1'b0;
     end else begin
       wfull        <= wfull_val;
-      walmost_full <= (wlevel >= ALMOST_FULL_THRESH);
+      walmost_full <= (wlevel >= (ADDR_WIDTH+1)'(ALMOST_FULL_THRESH));
     end
   end
 
   // --------------------------------------------------------------------------
   // Read Clock Domain Logic
   // --------------------------------------------------------------------------
-  assign rbin_next  = rbin + (rinc & ~rempty);
+  assign rbin_next  = rbin + {{(ADDR_WIDTH){1'b0}}, (rinc & ~rempty)};
   assign rgray_next = (rbin_next >> 1) ^ rbin_next;
 
   always_ff @(posedge rclk or negedge rrst_n) begin
@@ -156,7 +156,7 @@ module async_fifo #(
       ralmost_empty <= 1'b1;
     end else begin
       rempty        <= rempty_val;
-      ralmost_empty <= (rlevel <= ALMOST_EMPTY_THRESH);
+      ralmost_empty <= (rlevel <= (ADDR_WIDTH+1)'(ALMOST_EMPTY_THRESH));
     end
   end
 

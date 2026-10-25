@@ -1,6 +1,8 @@
 # UVM 1.2 Verification of Dual-Clock Asynchronous FIFO with SVA & CDC Analysis
 
-An industrial-grade Universal Verification Methodology (UVM 1.2) testbench and synthesizable SystemVerilog implementation of a multi-clock domain Asynchronous FIFO. Features dual-frequency Clock Domain Crossing (CDC), Gray-code pointer synchronization with 2-FF metastability protection, formal SystemVerilog Assertions (SVA), decoupled TLM analysis scoreboards, and full coverage.
+[![CI Regression & Synthesis](https://github.com/nikunjmalik306/uvm-async-fifo-verification/actions/workflows/ci.yml/badge.svg)](https://github.com/nikunjmalik306/uvm-async-fifo-verification/actions/workflows/ci.yml)
+
+An industrial-grade Universal Verification Methodology (UVM 1.2) testbench and synthesizable SystemVerilog implementation of a multi-clock domain Asynchronous FIFO. Features dual-frequency Clock Domain Crossing (CDC), Gray-code pointer synchronization with 2-FF metastability protection, formal SystemVerilog Assertions (SVA), deterministic TLM analysis scoreboards, and full coverage.
 
 Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) standards.
 
@@ -82,21 +84,23 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 ```
 
 ### Verification Highlights & Fixes
-1. **Asynchronous TLM Synchronization**:
+1. **Deterministic Asynchronous Scoreboard**:
    - Write and Read monitors deliver transactions to the scoreboard through dedicated `uvm_tlm_analysis_fifo` channels.
-   - Eliminates callback race conditions between independent asynchronous clock domains ($wclk$ and $rclk$).
+   - Eliminates arbitrary timed `#50ns` delays with deterministic queue event synchronization (`wait(expected_queue.size() > 0)`).
 2. **Pipelined Read Monitor**:
-   - Accurately captures consecutive back-to-back read pops without skipping cycles on back-to-back bursts.
+   - Captures consecutive back-to-back read pops without skipping cycles on back-to-back bursts.
 3. **Strict Zero-Tolerance Fail Criteria**:
    - Scoreboard audit verifies `mismatch_count == 0`, `total_pushed == total_popped`, `total_popped > 0`, and `expected_queue.size() == 0`.
-   - Any failure or timeout triggers immediate non-zero termination (`$fatal(1)` or `` `uvm_fatal ``), ensuring CI/CD regressions fail fast.
+   - Any failure or timeout triggers immediate non-zero termination (`$fatal(1)` or `` `uvm_fatal ``).
 4. **Multi-Domain Frequency Skew Testing**:
    - Stress-tested under **Fast Write / Slow Read** ($100\text{ MHz} \rightarrow 66.7\text{ MHz}$) and **Slow Write / Fast Read** ($40\text{ MHz} \rightarrow 125\text{ MHz}$).
-   - Attempted illegal overflow while `wfull == 1` and illegal underflow while `rempty == 1` verified safe.
+   - Attempted illegal overflow while `wfull == 1` and illegal underflow while `rempty == 1` verified blocked.
 5. **SystemVerilog Assertions (SVA)**:
    - `p_no_overflow`: Ensures `winc` never asserts when `wfull` is active.
    - `p_no_underflow`: Ensures `rinc` never asserts when `rempty` is active.
    - `p_gray_single_bit`: Formally asserts Gray pointer transitions never toggle more than 1 bit at any clock edge.
+6. **Verilator Lint Clean**:
+   - Zero width-expansion warnings; verified with `verilator --lint-only -Wall`.
 
 ---
 
@@ -107,7 +111,7 @@ uvm-async-fifo-verification/
 ├── rtl/
 │   ├── sync_2ff.sv                 # 2-FF Metastability CDC Synchronizer
 │   ├── gray_counter.sv             # Binary-to-Gray and Gray-to-Binary converters
-│   ├── async_fifo.sv               # Dual-Clock Asynchronous FIFO RTL
+│   ├── async_fifo.sv               # Dual-Clock Asynchronous FIFO RTL (Verilator clean)
 │   └── fifo_sva.sv                 # Dual-Mode SystemVerilog Assertions (Formal SVA + Procedural)
 ├── tb/
 │   ├── uvm/                        # Complete UVM 1.2 Class Environment
@@ -131,7 +135,6 @@ uvm-async-fifo-verification/
 ## Simulation & Verification Results
 
 ### Standalone Self-Checking Dual-Clock Regression (Icarus Verilog / VVP)
-Simulated with dynamic clock ratio reversal, full/empty flag corner cases, illegal push/pop injection, and concurrent asynchronous stress:
 
 ```text
 ================================================================
@@ -180,7 +183,7 @@ FIFO Empty Flag on Completion:   1 (Must be 1)
 
 ## Yosys Gate-Level Synthesis Results
 
-Synthesized with Yosys Open SYnthesis Suite (`syn/synth.ys`):
+Synthesized with Yosys Open SYnthesis Suite:
 
 ```text
 === async_fifo (design hierarchy) ===

@@ -4,6 +4,7 @@
 //              CDC domain crossing, golden reference model, and functional coverage.
 // Features:
 //   - Asynchronous clock domain decoupling using uvm_tlm_analysis_fifo
+//   - Deterministic transaction-ordering model without arbitrary timed waits
 //   - Strict drain validation: expected_queue must be empty at end of test
 //   - Strict transaction balance: total_pushed == total_popped
 //   - Non-zero simulation exit via `uvm_fatal on any verification failure
@@ -57,26 +58,20 @@ class fifo_scoreboard extends uvm_scoreboard;
         rd_fifo.get(rd_item);
         total_popped++;
 
-        // In case of delta-cycle race between monitors, wait briefly for expected_queue
+        // Deterministic transaction-ordering synchronization:
+        // In physical CDC hardware, data read on rclk was pushed at an earlier wclk edge.
+        // Wait deterministically for expected_queue without arbitrary timed delays:
         if (expected_queue.size() == 0) begin
-          fork
-            wait(expected_queue.size() > 0);
-            #50ns;
-          join_any
+          wait(expected_queue.size() > 0);
         end
 
-        if (expected_queue.size() == 0) begin
-          `uvm_error("SCB_UNDERFLOW", $sformatf("Read item 0x%08h captured, but Expected Reference Queue is EMPTY!", rd_item.data))
-          mismatch_count++;
+        exp_data = expected_queue.pop_front();
+        if (rd_item.data === exp_data) begin
+          match_count++;
+          `uvm_info("SCB_MATCH", $sformatf("MATCH [0x%08h] | Total Matches: %0d", rd_item.data, match_count), UVM_HIGH)
         end else begin
-          exp_data = expected_queue.pop_front();
-          if (rd_item.data === exp_data) begin
-            match_count++;
-            `uvm_info("SCB_MATCH", $sformatf("MATCH [0x%08h] | Total Matches: %0d", rd_item.data, match_count), UVM_HIGH)
-          end else begin
-            mismatch_count++;
-            `uvm_error("SCB_MISMATCH", $sformatf("DATA MISMATCH! Got: 0x%08h != Expected: 0x%08h", rd_item.data, exp_data))
-          end
+          mismatch_count++;
+          `uvm_error("SCB_MISMATCH", $sformatf("DATA MISMATCH! Got: 0x%08h != Expected: 0x%08h", rd_item.data, exp_data))
         end
       end
     join

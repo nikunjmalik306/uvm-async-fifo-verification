@@ -1,0 +1,35 @@
+name: CI Regression & Synthesis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  regression:
+    name: Dual-Clock FIFO CDC & Synthesis CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Open-Source EDA Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator yosys
+
+      - name: Verilator Lint Checks
+        run: |
+          verilator --lint-only -Wall -Wno-DECLFILENAME --top-module async_fifo rtl/sync_2ff.sv rtl/gray_counter.sv rtl/async_fifo.sv
+
+      - name: Run Standalone Dual-Clock SVA Regression (816 Vectors)
+        run: |
+          cd sim
+          make clean
+          make sim
+
+      - name: Run Yosys Gate-Level Synthesis
+        run: |
+          cd sim
+          make synth
