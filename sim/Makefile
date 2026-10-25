@@ -57,7 +57,7 @@ sim:
 	@echo "==> Compiling RTL and SVA with Icarus Verilog..."
 	$(IVERILOG) -g2012 -o $(SIM_BIN) $(RTL_SRCS) $(TB_SRCS)
 	@echo "==> Running Dual-Clock Skew CDC Simulation..."
-	$(VVP) $(SIM_BIN)
+	$(VVP) $(SIM_BIN) | tee simulation.log
 
 wave:
 	@if [ -f "$(VCD_FILE)" ]; then \
@@ -94,5 +94,5 @@ uvm_xcelium:
 		+UVM_TESTNAME=$(TESTNAME) +UVM_VERBOSITY=UVM_MEDIUM -l xcelium_uvm.log
 
 clean:
-	rm -f $(SIM_BIN) $(VCD_FILE) uvm_async_fifo.vcd vcs_uvm.log questa_uvm.log xcelium_uvm.log
+	rm -f $(SIM_BIN) $(VCD_FILE) simulation.log uvm_async_fifo.vcd vcs_uvm.log questa_uvm.log xcelium_uvm.log
 	rm -rf work transcript vsim.wlf INCA_libs simv* csrc *.key

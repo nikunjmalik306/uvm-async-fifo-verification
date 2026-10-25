@@ -29,13 +29,12 @@ jobs:
           make clean
           make sim
 
-      - name: Verify Commercial UVM Regression Log & Coverage Artifacts
-        run: |
-          test -f sim/uvm_questa_regression.log
-          grep -q "ALL FIFO UVM VERIFICATION CRITERIA MET" sim/uvm_questa_regression.log
-          grep -q "Total Coverage: 100.00%" sim/uvm_questa_regression.log
-          grep -q "UVM_ERROR : 0" sim/uvm_questa_regression.log
-          echo "Verified checked-in Siemens Questa Sim UVM regression log: 0 mismatches, 100% functional & assertion coverage."
+      - name: Capture & Upload Live Simulation Regression Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: async-fifo-cdc-regression-log
+          path: sim/simulation.log
 
       - name: Run Yosys Gate-Level Synthesis
         run: |

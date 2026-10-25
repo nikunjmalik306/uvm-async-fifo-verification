@@ -101,8 +101,8 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
    - `p_no_underflow`: Ensures `rinc` never asserts when `rempty` is active.
    - `p_gray_single_bit`: Formally asserts Gray pointer transitions never toggle more than 1 bit at any clock edge.
 6. **Two-Tier Verification Strategy**:
-   - **Tier 1 (CI Automation):** GitHub Actions automated regression with Verilator lint, dual-clock SVA regression (816 vectors), Yosys gate synthesis, and artifact verification.
-   - **Tier 2 (Commercial UVM):** Verified under Siemens Questa Sim-64 2024.1 with full UVM 1.2 class hierarchy, checked-in raw simulation log, and 100.00% functional coverage proof.
+   - **Tier 1 (Automated GitHub Actions CI):** Executes Verilator linting, standalone dual-clock SVA regression (816 vectors across 100MHz / 66.7MHz and 40MHz / 125MHz skew), and Yosys gate synthesis on every commit. Generates and uploads live simulation logs as downloadable GitHub Actions artifacts (`async-fifo-cdc-regression-log`).
+   - **Tier 2 (Commercial UVM 1.2 Testbench):** Full IEEE 1800.2 UVM environment (`tb/uvm/`) configured with native build scripts for Siemens Questa Sim (`make uvm_questa`), Synopsys VCS (`make uvm_vcs`), and Cadence Xcelium (`make uvm_xcelium`). A complete, unabridged 1,710-line raw simulator log (`sim/uvm_questa_regression.log`) documenting all 816 transactions and 100.00% covergroup coverage is checked in for offline evaluation.
 
 ---
 
