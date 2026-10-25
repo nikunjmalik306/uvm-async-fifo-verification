@@ -24,11 +24,11 @@ module gray_to_bin #(
   output logic [WIDTH-1:0] bin
 );
 
-  always_comb begin
-    bin[WIDTH-1] = gray[WIDTH-1];
-    for (int i = WIDTH-2; i >= 0; i--) begin
-      bin[i] = bin[i+1] ^ gray[i];
+  genvar gi;
+  generate
+    for (gi = 0; gi < WIDTH; gi++) begin : gen_g2b
+      assign bin[gi] = ^(gray >> gi);
     end
-  end
+  endgenerate
 
 endmodule

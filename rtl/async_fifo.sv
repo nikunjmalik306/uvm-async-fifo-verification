@@ -32,6 +32,13 @@ module async_fifo #(
 
   localparam int DEPTH = 1 << ADDR_WIDTH;
 
+  // Elaboration parameter guard: Cummings dual-MSB Gray full detection requires ADDR_WIDTH >= 2
+  initial begin
+    if (ADDR_WIDTH < 2) begin
+      $fatal(1, "[CONFIG_ERROR] async_fifo ADDR_WIDTH must be >= 2 for dual-MSB Gray full detection (given %0d)", ADDR_WIDTH);
+    end
+  end
+
   // Dual-Port RAM Array
   logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
 

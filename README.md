@@ -110,9 +110,12 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 
 ```text
 uvm-async-fifo-verification/
+├── docs/
+│   ├── technical_audit.md          # CDC architecture, pointer boundary proofs & synthesis audit
+│   └── portfolio_summary.md        # Qualcomm resume bullets, DV metrics & interview Q&A
 ├── rtl/
-│   ├── sync_2ff.sv                 # 2-FF Metastability CDC Synchronizer
-│   ├── gray_counter.sv             # Binary-to-Gray and Gray-to-Binary converters
+│   ├── sync_2ff.sv                 # 2-FF Metastability CDC Synchronizer (ASYNC_REG)
+│   ├── gray_counter.sv             # Continuous XOR-tree Binary-to-Gray / Gray-to-Binary
 │   ├── async_fifo.sv               # Dual-Clock Asynchronous FIFO RTL (Verilator clean)
 │   └── fifo_sva.sv                 # Dual-Mode SystemVerilog Assertions (Formal SVA + Procedural)
 ├── tb/
@@ -131,6 +134,13 @@ uvm-async-fifo-verification/
 └── sim/
     └── Makefile                    # Unified build Makefile for Icarus, Questa, VCS, Xcelium, Yosys
 ```
+
+---
+
+## Detailed Documentation
+
+- [Technical Audit & Architectural Specification](docs/technical_audit.md)
+- [Portfolio Summary & Qualcomm Interview Guide](docs/portfolio_summary.md)
 
 ---
 
