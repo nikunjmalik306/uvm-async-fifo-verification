@@ -1,6 +1,6 @@
 // ==============================================================================
-// File: fifo_driver_monitor_agent.sv
-// Description: UVM Drivers, Monitors, and Agent for dual-clock asynchronous FIFO.
+// File: fifo_agent.sv
+// Description: UVM Drivers, Monitors, and Agents for dual-clock asynchronous FIFO.
 // ==============================================================================
 
 `timescale 1ns / 1ps
@@ -132,7 +132,7 @@ class fifo_wr_monitor extends uvm_monitor;
 endclass: fifo_wr_monitor
 
 // ----------------------------------------------------------------------------
-// Read Monitor (Passively captures popped data on rclk)
+// Read Monitor (Pipelined non-blocking sampling: handles back-to-back reads)
 // ----------------------------------------------------------------------------
 class fifo_rd_monitor extends uvm_monitor;
   `uvm_component_utils(fifo_rd_monitor)
@@ -154,18 +154,20 @@ class fifo_rd_monitor extends uvm_monitor;
 
   virtual task run_phase(uvm_phase phase);
     fifo_seq_item item;
+    bit pending_rd = 0;
     @(posedge vif.rrst_n);
 
     forever begin
       @(posedge vif.rclk);
-      if (vif.rinc && !vif.rempty) begin
-        // Output arrives on the subsequent registered cycle
-        @(posedge vif.rclk);
+      // Sample data on cycle following active rinc & !rempty
+      if (pending_rd) begin
         item = fifo_seq_item::type_id::create("item");
         item.op   = fifo_seq_item::READ;
         item.data = vif.rdata;
         ap.write(item);
       end
+      // Track read request for subsequent clock edge
+      pending_rd = (vif.rinc && !vif.rempty);
     end
   endtask
 endclass: fifo_rd_monitor

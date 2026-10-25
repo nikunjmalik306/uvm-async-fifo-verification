@@ -1,6 +1,6 @@
 # UVM 1.2 Verification of Dual-Clock Asynchronous FIFO with SVA & CDC Analysis
 
-An industrial-grade Universal Verification Methodology (UVM 1.2) testbench and synthesizable SystemVerilog implementation of a multi-clock domain Asynchronous FIFO. Features dual-frequency Clock Domain Crossing (CDC), Gray-code pointer synchronization with 2-FF metastability protection, formal SystemVerilog Assertions (SVA), and a complete UVM class hierarchy.
+An industrial-grade Universal Verification Methodology (UVM 1.2) testbench and synthesizable SystemVerilog implementation of a multi-clock domain Asynchronous FIFO. Features dual-frequency Clock Domain Crossing (CDC), Gray-code pointer synchronization with 2-FF metastability protection, formal SystemVerilog Assertions (SVA), decoupled TLM analysis scoreboards, and full coverage.
 
 Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) standards.
 
@@ -8,7 +8,7 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 
 ## Architectural Block Diagram
 
-```
+```text
 +===================================================================================================================+
 |                                    DUAL-CLOCK ASYNCHRONOUS FIFO ARCHITECTURE                                      |
 +===================================================================================================================+
@@ -46,14 +46,14 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 
 ---
 
-## Verification & UVM Architecture
+## Verification Architecture & Methodology
 
-```
+```text
 +===================================================================================================================+
 |                                        UVM 1.2 TESTBENCH CLASS HIERARCHY                                         |
 +===================================================================================================================+
 |                                                                                                                   |
-|                                              [ fifo_base_test ]                                                   |
+|                                        [ fifo_concurrent_stress_test ]                                             |
 |                                                      |                                                            |
 |                                              [   fifo_env   ]                                                     |
 |                                                      |                                                            |
@@ -61,14 +61,14 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 |              |                                       |                                       |                    |
 |      [  fifo_wr_agent  ]                     [  fifo_rd_agent  ]                    [ fifo_scoreboard ]           |
 |      |                 |                     |                 |                    |                 |           |
-|  +-------+         +-------+             +-------+         +-------+                | Golden Queue    |           |
-|  |  SQR  |         |  MON  |             |  SQR  |         |  MON  |                | Reference Model |           |
-|  +-------+         +-------+             +-------+         +-------+                +-----------------+           |
-|      | (seq_item)      | (ap)                | (seq_item)      | (ap)                        ^                    |
-|      v                 |                     v                 |                             |                    |
-|  +-------+             +---------------------+-----------------+-----------------------------+                    |
-|  |  DRV  |                                   | (Analysis Port Broadcasting)                                       |
-|  +-------+                                   v                                                                    |
+|  +-------+         +-------+             +-------+         +-------+                | uvm_tlm_        |           |
+|  |  SQR  |         |  MON  |             |  SQR  |         |  MON  |                | analysis_fifo   |           |
+|  +-------+         +-------+             +-------+         +-------+                | & Golden Queue  |           |
+|      |                 |                         |                 |                +-----------------+           |
+|      v                 v                         v                 v                         ^                    |
+|  [  DRV  ]             +-------------------------+-----------------+-------------------------+                    |
+|      |                                           |                                                                |
+|      v                                           v                                                                |
 |      |                               [ fifo_coverage ] (Functional Covergroups & Crosses)                         |
 |      |                                                                                                            |
 |      +=========================> [ Virtual Interface (fifo_if) ] <=========================+                      |
@@ -81,21 +81,22 @@ Engineered to meet Qualcomm / Tier-1 semiconductor design verification (DV) stan
 +===================================================================================================================+
 ```
 
-### Key Verification Features
-1. **Clock Domain Crossing (CDC) Integrity**:
-   - Validates multi-clock asynchronous behavior under clock frequency skew ($wclk = 100\text{ MHz}$, $rclk = 66.6\text{ MHz}$).
-   - `sync_2ff.sv` prevents metastability with `(* ASYNC_REG = "TRUE" *)`.
-   - Gray-code pointer encoding ensures single-bit transitions per clock tick.
-2. **SystemVerilog Formal Assertions (SVA)**:
-   - **No Overflow (`p_no_overflow`)**: Flags an assertion error if a write is issued when `wfull` is asserted.
-   - **No Underflow (`p_no_underflow`)**: Flags an assertion error if a read is issued when `rempty` is asserted.
-   - **Single-bit Gray Transition (`p_gray_single_bit`)**: Formally verifies that pointers never transition by more than 1 bit between clock edges.
-3. **UVM Scoreboard & Golden Reference Model**:
-   - Employs TLM `uvm_analysis_imp` broadcasting from write and read monitors into an internal expected FIFO queue.
-   - Self-checking transaction evaluation guarantees zero dropped packets and strict in-order arrival.
-4. **Functional Coverage**:
-   - Bins for critical data patterns: All-Zeros, All-Ones, Alternating `0x5555_5555`, Alternating `0xAAAA_AAAA`, and random values.
-   - Cross-coverage between transaction types and full/empty flag transitions.
+### Verification Highlights & Fixes
+1. **Asynchronous TLM Synchronization**:
+   - Write and Read monitors deliver transactions to the scoreboard through dedicated `uvm_tlm_analysis_fifo` channels.
+   - Eliminates callback race conditions between independent asynchronous clock domains ($wclk$ and $rclk$).
+2. **Pipelined Read Monitor**:
+   - Accurately captures consecutive back-to-back read pops without skipping cycles on back-to-back bursts.
+3. **Strict Zero-Tolerance Fail Criteria**:
+   - Scoreboard audit verifies `mismatch_count == 0`, `total_pushed == total_popped`, `total_popped > 0`, and `expected_queue.size() == 0`.
+   - Any failure or timeout triggers immediate non-zero termination (`$fatal(1)` or `` `uvm_fatal ``), ensuring CI/CD regressions fail fast.
+4. **Multi-Domain Frequency Skew Testing**:
+   - Stress-tested under **Fast Write / Slow Read** ($100\text{ MHz} \rightarrow 66.7\text{ MHz}$) and **Slow Write / Fast Read** ($40\text{ MHz} \rightarrow 125\text{ MHz}$).
+   - Attempted illegal overflow while `wfull == 1` and illegal underflow while `rempty == 1` verified safe.
+5. **SystemVerilog Assertions (SVA)**:
+   - `p_no_overflow`: Ensures `winc` never asserts when `wfull` is active.
+   - `p_no_underflow`: Ensures `rinc` never asserts when `rempty` is active.
+   - `p_gray_single_bit`: Formally asserts Gray pointer transitions never toggle more than 1 bit at any clock edge.
 
 ---
 
@@ -107,71 +108,129 @@ uvm-async-fifo-verification/
 │   ├── sync_2ff.sv                 # 2-FF Metastability CDC Synchronizer
 │   ├── gray_counter.sv             # Binary-to-Gray and Gray-to-Binary converters
 │   ├── async_fifo.sv               # Dual-Clock Asynchronous FIFO RTL
-│   └── fifo_sva.sv                 # SystemVerilog Formal Assertions (SVA)
+│   └── fifo_sva.sv                 # Dual-Mode SystemVerilog Assertions (Formal SVA + Procedural)
 ├── tb/
-│   ├── uvm/                        # Full UVM 1.2 Testbench (VCS/Questa/EDA Playground)
-│   │   ├── fifo_if.sv              # Dual-clock SystemVerilog interface
-│   │   ├── fifo_seq_item.sv        # UVM Sequence Item with distribution constraints
-│   │   ├── fifo_agent.sv           # Write & Read Drivers, Monitors, and Agents
-│   │   ├── fifo_scoreboard.sv     # TLM Scoreboard & Functional Coverage subscriber
-│   │   ├── fifo_env.sv             # UVM Environment & Sequence library
-│   │   └── tb_top_uvm.sv           # Top UVM module with `run_test()`
+│   ├── uvm/                        # Complete UVM 1.2 Class Environment
+│   │   ├── fifo_if.sv              # Dual-clock SystemVerilog interface with clocking blocks
+│   │   ├── fifo_seq_item.sv        # Sequence items with delay and pattern distributions
+│   │   ├── fifo_agent.sv           # Pipelined drivers, monitors, and agents
+│   │   ├── fifo_scoreboard.sv     # TLM analysis FIFO scoreboard & functional covergroups
+│   │   ├── fifo_env.sv             # Test sequences and UVM test definitions
+│   │   └── tb_top_uvm.sv           # Top-level UVM test harness
 │   └── sim/
-│       └── tb_async_fifo_selfcheck.sv # Standalone self-checking testbench for macOS
+│       └── tb_async_fifo_selfcheck.sv # Standalone self-checking testbench (816+ vectors)
 ├── syn/
-│   └── synth.ys                    # Open-source Yosys synthesis script
+│   ├── synth.ys                    # Open-source Yosys synthesis script
+│   └── yosys_synth.log             # Raw synthesis gate-level report
 └── sim/
-    └── Makefile                    # macOS build Makefile (Icarus Verilog + GTKWave)
+    └── Makefile                    # Unified build Makefile for Icarus, Questa, VCS, Xcelium, Yosys
 ```
 
 ---
 
 ## Simulation & Verification Results
 
-Executed on macOS with asynchronous clock skew ($100\text{ MHz} \leftrightarrow 66.6\text{ MHz}$) and randomized packet delays:
+### Standalone Self-Checking Dual-Clock Regression (Icarus Verilog / VVP)
+Simulated with dynamic clock ratio reversal, full/empty flag corner cases, illegal push/pop injection, and concurrent asynchronous stress:
 
 ```text
-----------------------------------------------------------------
-[TB] STARTING ASYNCHRONOUS DUAL-CLOCK FIFO VERIFICATION
-[TB] wclk = 100 MHz (10ns) | rclk = 66.6 MHz (15ns) | Depth = 16
-----------------------------------------------------------------
+================================================================
+     QUALCOMM HW-DV GRADE ASYNCHRONOUS FIFO TESTBENCH          
+     Depth: 16 entries | Data Width: 32 bits                  
+================================================================
 
-[TEST 1] Performing Burst Writes until FIFO is FULL...
-[PASSED] FIFO successfully asserted wfull flag after 16 writes.
+[TEST 1] Burst Write 16 Items to Fill FIFO...
+[PASSED] wfull and walmost_full correctly asserted at capacity.
 
-[TEST 2] Performing Burst Reads until FIFO is EMPTY...
-[PASSED] FIFO successfully asserted rempty flag after 16 reads.
+[TEST 2] Attempting Overflow Write when wfull == 1...
+ERROR: ../rtl/fifo_sva.sv:37: [SVA_VIOLATION @ 465000] OVERFLOW DETECTED: Write asserted while FIFO is FULL!
+       Time: 465000  Scope: tb_async_fifo_selfcheck.u_sva
+[PASSED] Overflow write blocked; internal state preserved.
 
-[TEST 3] Running Concurrent Asynchronous Push & Pop (Stress Testing CDC)...
+[TEST 3] Burst Read 16 Items to Empty FIFO...
+[PASSED] rempty and ralmost_empty correctly asserted when empty.
+
+[TEST 4] Attempting Underflow Read when rempty == 1...
+ERROR: ../rtl/fifo_sva.sv:43: [SVA_VIOLATION @ 1328000] UNDERFLOW DETECTED: Read asserted while FIFO is EMPTY!
+       Time: 1327500  Scope: tb_async_fifo_selfcheck.u_sva
+[PASSED] Underflow read blocked; pointers intact.
+
+[TEST 5] Concurrent Random Push/Pop Stress (500 items, Fast Write / Slow Read)...
+
+[TEST 6] Clock Skew Reversal (Slow Write = 40MHz, Fast Read = 125MHz, 300 items)...
 
 ================================================================
-          ASYNCHRONOUS FIFO SCOREBOARD SUMMARY REPORT           
+          ASYNCHRONOUS FIFO SCOREBOARD FINAL AUDIT              
 ================================================================
-Total Packets Pushed:       66
-Total Packets Popped:       66
-Total Data Matches:         66
-Total Data Mismatches:      0
-Remaining Items in Queue:   0
+Total Transactions Pushed:       816
+Total Transactions Popped:       816
+Data Matches Confirmed:          816
+Data Mismatches:                 0
+Golden Queue Remainder:          0 (Must be 0)
+FIFO Empty Flag on Completion:   1 (Must be 1)
 ================================================================
 
 ################################################################
-###                 ALL FIFO TESTS PASSED!                   ###
-###      CDC Synchronization & Data Integrity 100% Verified  ###
+###       ALL 816 ASYNC FIFO TESTS PASSED WITH 100% INTEGRITY! ###
+###       CDC SYNCHRONIZATION AND SVA ASSERTIONS VERIFIED   ###
 ################################################################
 ```
 
 ---
 
-## Quick Start on macOS
+## Yosys Gate-Level Synthesis Results
 
+Synthesized with Yosys Open SYnthesis Suite (`syn/synth.ys`):
+
+```text
+=== async_fifo (design hierarchy) ===
+
+   Wires:               104
+   Wire bits:           381
+   Public wires:         44
+   Public wire bits:    210
+   Ports:                24
+   Port bits:           118
+
+   Cell Count:          224
+     $_AND_              43
+     $_DFF_PN0_          40   (Active-low async-reset DFFs for CDC & pointers)
+     $_DFF_PN1_           2
+     $_MUX_              36
+     $_NOT_              23
+     $_OR_               25
+     $_XOR_              54   (Binary <-> Gray converters)
+     $mem_v2              1   (Dual-port static RAM array)
+
+   Inferred Latches:      0   (Strictly synchronous, lint-clean)
+```
+
+---
+
+## How to Run
+
+### 1. Standalone Simulation (Open-Source / macOS)
 ```bash
-# 1. Run simulation with Icarus Verilog
 cd sim
-make sim
+make sim       # Compiles and executes full 816-vector regression
+make wave      # Launches GTKWave to view dual-clock CDC waveforms
+```
 
-# 2. View waveforms in GTKWave
-make wave
+### 2. Yosys Synthesis
+```bash
+cd sim
+make synth     # Synthesizes gate-level netlist and prints cell report
+```
 
-# 3. Run Yosys synthesis
-make synth
+### 3. Commercial UVM 1.2 Simulators
+```bash
+cd sim
+# Synopsys VCS
+make uvm_vcs TESTNAME=fifo_concurrent_stress_test
+
+# Siemens QuestaSim
+make uvm_questa TESTNAME=fifo_concurrent_stress_test
+
+# Cadence Xcelium
+make uvm_xcelium TESTNAME=fifo_concurrent_stress_test
 ```
