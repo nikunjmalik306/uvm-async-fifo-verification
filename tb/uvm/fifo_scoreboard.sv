@@ -60,27 +60,21 @@ class fifo_scoreboard extends uvm_scoreboard;
         rd_fifo.get(rd_item);
         total_popped++;
 
-        // Deterministic delta-cycle settlement and synchronization
+        // Deterministic delta-cycle settlement and causality verification:
+        // By physical FIFO causality, an item must be written before it can be read.
+        // If the queue is empty at the arrival timestamp, settle any concurrent active delta-cycles:
         if (expected_queue.size() == 0) begin
-          #0; // Settle any concurrent delta-cycle monitor evaluations at current time
+          #0; // Delta-cycle settlement for coincident wclk/rclk monitor events at identical timestamp
         end
 
-        // If queue is still empty, wait for push event with bounded timeout
-        if (expected_queue.size() == 0) begin
-          fork
-            begin
-              @(item_pushed_event);
-            end
-            begin
-              // Bounded timeout to prevent simulation deadlock on hardware underflow
-              #100ns;
-            end
-          join_any
-        end
-
+        // Fully timing-independent underflow detection:
+        // If the expected queue is still empty after delta-cycle settlement, an illegal read occurred.
+        // No arbitrary physical time wait (#100ns) is required; violation is flagged immediately.
         if (expected_queue.size() == 0) begin
           mismatch_count++;
-          `uvm_error("SCB_UNDERFLOW", $sformatf("READ UNDERFLOW! Read item [0x%08h] observed but golden queue is EMPTY! No matching write transaction exists.", rd_item.data))
+          `uvm_error("SCB_UNDERFLOW", $sformatf(
+            "READ UNDERFLOW! Read transaction [0x%08h] observed at t=%0t with EMPTY golden queue. Violation of FIFO causality.",
+            rd_item.data, $time))
         end else begin
           exp_data = expected_queue.pop_front();
           if (rd_item.data === exp_data) begin

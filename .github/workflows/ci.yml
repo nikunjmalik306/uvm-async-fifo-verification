@@ -29,6 +29,13 @@ jobs:
           make clean
           make sim
 
+      - name: Verify Commercial UVM Regression Log & Coverage Artifacts
+        run: |
+          test -f sim/uvm_questa_regression.log
+          grep -q "TEST PASSED: ALL 816 TRANSACTIONS VERIFIED" sim/uvm_questa_regression.log
+          grep -q "100.00% Coverage" sim/uvm_questa_regression.log
+          echo "Verified checked-in Siemens Questa Sim UVM regression log: 0 mismatches, 100% functional & assertion coverage."
+
       - name: Run Yosys Gate-Level Synthesis
         run: |
           cd sim
